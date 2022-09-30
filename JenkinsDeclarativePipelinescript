@@ -1,0 +1,78 @@
+
+pipeline{
+
+agent any
+
+triggers{
+  pollSCM('* * * * *')
+  //pipelineTriggers([githubPush()])
+  //pipelineTriggers([cron('* * * * *')])
+}
+
+
+tools{
+maven "maven3.8.6"
+}
+
+
+stages{
+
+  stage('CheckoutCode'){
+  steps{
+    git credentialsId: 'e95363d6-d59b-4382-a066-5c1abc802f5c', url: 'https://github.com/bhaskarred/maven-web-application.git'
+
+    }
+   }
+  stage('Build'){
+  steps{
+    sh "mvn clean package"
+   }
+  }
+  stage('ExcuteSonarqubeReport'){
+  steps{
+    sh "mvn clean sonar:sonar"
+    }
+  }
+  stage('UploadArtifactIntoNexus'){
+  steps{
+    sh "mvn clean deploy"
+    }
+  }
+  stage('DeployAppIntoTomcat'){
+   steps{
+    sshagent(['e78b040c-46df-4fd9-8819-ac7eb9c9b279']) {
+    sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@172.31.0.116:/opt/tomcat9/webapps/"
+    }
+  }
+ }
+  
+ }//Stages Closing
+ 
+ post{
+ 
+ always{
+ emailext body: '''Build is over -- success!!!
+
+  Regards,
+  Bhaskar,
+  9652943066.''', subject: 'Build is over', to: 'bhaskarkm1990@gmail.com'
+ }
+ success{
+ emailext body: '''Build is over -- success!!!
+
+ Regards,
+ Bhaskar,
+ 9652943066.''', subject: 'Build is over', to: 'bhaskarkm1990@gmail.com'
+ }
+ failure{
+ emailext body: '''Build is over -- failed!!!
+
+ Regards,
+ Bhaskar,
+ 9652943066.''', subject: 'Build is over', to: 'bhaskarkm1990@gmail.com'
+ }
+
+
+}
+ 
+}//Pipeline Closing
